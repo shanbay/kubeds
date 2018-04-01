@@ -1,0 +1,69 @@
+project_name: kubeds
+
+builds:
+- goos:
+  - linux
+  - darwin
+  goarch:
+  - amd64
+  - "386"
+  ignore:
+    - goos: darwin
+      goarch: 386
+  targets:
+  - linux_amd64
+  - linux_386
+  - darwin_amd64
+  main: ./kubeds
+  ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+  binary: kubeds
+  lang: go
+
+archive:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm
+    }}v{{ .Arm }}{{ end }}'
+  format: tar.gz
+  files:
+  - LICENSE*
+  - README*
+  - CHANGELOG*
+
+release:
+  # Repo in which the release will be created.
+  # Default is extracted from the origin remote URL.
+  github:
+    owner: earlzo
+    name: kubeds
+
+  # If set to true, will not auto-publish the release.
+  # Default is false.
+  draft: false
+
+  # If set to true, will mark the release as not ready for production.
+  # Default is false.
+  prerelease: true
+
+  # You can change the name of the GitHub release.
+  # This is parsed with the Go template engine and the following variables
+  # are available:
+  # - ProjectName
+  # - Tag
+  # - Version (Git tag without `v` prefix)
+  # Default is ``
+  name_template: "{{.ProjectName}}-v{{.Version}}"
+
+snapshot:
+  name_template: SNAPSHOT-{{ .Timestamp }}-{{.Commit}}
+
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_checksums.txt'
+dist: dist
+sign:
+  cmd: gpg
+  args:
+  - --output
+  - $signature
+  - --detach-sig
+  - $artifact
+  signature: ${artifact}.sig
+  artifacts: none
