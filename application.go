@@ -4,7 +4,6 @@ import (
 	"context"
 	"net"
 	"sync"
-
 	envoyApiV2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoyApiV2Core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	"github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
@@ -90,6 +89,17 @@ func InitApplication(config *viper.Viper) *Application {
 		}
 		// init snapshotCache
 		app.cache = cache.NewSnapshotCache(config.GetBool("ads"), Hasher{}, app.logger)
+		snapShot := cache.NewSnapshot(
+			"0",
+			[]cache.Resource{},
+			[]cache.Resource{},
+			[]cache.Resource{},
+			[]cache.Resource{},
+		)
+
+		if err := app.cache.SetSnapshot(nodeID, snapShot); err != nil {
+			app.logger.WithError(err).Errorln("Init snapshot failed ")
+		}
 		app.server = xds.NewServer(app.cache, nil)
 		app.grpcServer = grpc.NewServer()
 
@@ -152,9 +162,14 @@ func (a *Application) WatchEndpoints() {
 		}
 		endpoints := event.Object.(*k8sApiV1Core.Endpoints)
 		envoyEndpoints := a.Endpoints2ClusterLoadAssignment(endpoints, healthStatus)
+		resp, err := a.cache.Fetch(context.Background(), envoyApiV2.DiscoveryRequest{TypeUrl:"type.googleapis.com/envoy.api.v2.ClusterLoadAssignment"})
+		if err != nil {
+			a.logger.WithError(err).Fatalln("get previous snapshots failed")
+		}
+		mergedResources := append(resp.Resources, envoyEndpoints)
 		snapShot := cache.NewSnapshot(
 			endpoints.ResourceVersion,
-			[]cache.Resource{envoyEndpoints},
+			mergedResources,
 			[]cache.Resource{},
 			[]cache.Resource{},
 			[]cache.Resource{},
