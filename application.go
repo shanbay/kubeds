@@ -167,13 +167,11 @@ func (a *Application) WatchEndpoints() {
 		clusterName := getClusterNameByEndpoints(endpoints)
 		envoyEndpoints := a.Endpoints2ClusterLoadAssignment(endpoints, healthStatus)
 		a.snapshot[clusterName] = *envoyEndpoints
-		a.logger.Infoln("snapshots: ", a.snapshot)
 		var resources []cache.Resource
 		for k := range a.snapshot {
 			tmp := a.snapshot[k]
 			resources = append(resources, &tmp)
 		}
-		a.logger.Infoln("resources: ", resources)
 		snapShot := cache.NewSnapshot(
 			endpoints.ResourceVersion,
 			resources,
