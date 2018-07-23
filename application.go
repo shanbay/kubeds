@@ -171,6 +171,7 @@ func (a *Application) WatchEndpoints() {
 		for _, value := range a.snapshot {
 			resources = append(resources, &value)
 		}
+		a.logger.Infoln("resources: ", resources)
 		snapShot := cache.NewSnapshot(
 			endpoints.ResourceVersion,
 			resources,
