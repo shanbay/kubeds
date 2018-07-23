@@ -169,8 +169,9 @@ func (a *Application) WatchEndpoints() {
 		a.snapshot[clusterName] = *envoyEndpoints
 		a.logger.Infoln("snapshots: ", a.snapshot)
 		var resources []cache.Resource
-		for _, value := range a.snapshot {
-			resources = append(resources, &value)
+		for k := range a.snapshot {
+			tmp := a.snapshot[k]
+			resources = append(resources, &tmp)
 		}
 		a.logger.Infoln("resources: ", resources)
 		snapShot := cache.NewSnapshot(
