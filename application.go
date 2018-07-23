@@ -164,6 +164,12 @@ func (a *Application) WatchEndpoints() {
 		}
 		endpoints := event.Object.(*k8sApiV1Core.Endpoints)
 		clusterName := getClusterNameByEndpoints(endpoints)
+		previousStatus, exist := a.snapshot[clusterName]
+		if exist {
+			if previousStatus.Endpoints[0].LbEndpoints[0].HealthStatus == healthStatus {
+				continue
+			}
+		}
 		envoyEndpoints := a.Endpoints2ClusterLoadAssignment(endpoints, healthStatus)
 		a.snapshot[clusterName] = *envoyEndpoints
 		var resources []cache.Resource
