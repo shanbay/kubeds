@@ -146,8 +146,7 @@ func (a *Application) WatchEndpoints() {
 	// 初次监听会返回当前的状态
 	// Endpoints 属于一个资源, 每次更新会带上当前所有的 endpoint, 例如当某个部署副本由 1 调整到 3 则会收到两次 MODIFIED 事件
 	nameSpace := a.Config.GetString("namespace")
-	timeoutSeconds := int64(1)
-	endWatcher, err := a.KubeClient.CoreV1().Endpoints(nameSpace).Watch(k8sApiMetaV1.ListOptions{TimeoutSeconds: &timeoutSeconds})
+	endWatcher, err := a.KubeClient.CoreV1().Endpoints(nameSpace).Watch(k8sApiMetaV1.ListOptions{Watch:true})
 	if err != nil {
 		a.logger.WithError(err).Fatalln("watch endpoints changes failed")
 	}
