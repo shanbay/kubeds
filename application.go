@@ -102,6 +102,7 @@ func InitApplication(config *viper.Viper) *Application {
 		}
 		app.server = xds.NewServer(app.cache, nil)
 		app.grpcServer = grpc.NewServer()
+		app.snapshot = make(map[string]envoyApiV2.ClusterLoadAssignment)
 
 		envoyApiV2.RegisterEndpointDiscoveryServiceServer(app.grpcServer, app.server)
 
@@ -123,6 +124,7 @@ type Application struct {
 	server     xds.Server
 	grpcServer *grpc.Server
 	KubeClient *kubernetes.Clientset
+	snapshot map[string]envoyApiV2.ClusterLoadAssignment
 }
 
 // RunXds run xds server
@@ -144,7 +146,8 @@ func (a *Application) WatchEndpoints() {
 	// 初次监听会返回当前的状态
 	// Endpoints 属于一个资源, 每次更新会带上当前所有的 endpoint, 例如当某个部署副本由 1 调整到 3 则会收到两次 MODIFIED 事件
 	nameSpace := a.Config.GetString("namespace")
-	endWatcher, err := a.KubeClient.CoreV1().Endpoints(nameSpace).Watch(k8sApiMetaV1.ListOptions{})
+	timeoutSeconds := int64(1)
+	endWatcher, err := a.KubeClient.CoreV1().Endpoints(nameSpace).Watch(k8sApiMetaV1.ListOptions{TimeoutSeconds: &timeoutSeconds})
 	if err != nil {
 		a.logger.WithError(err).Fatalln("watch endpoints changes failed")
 	}
@@ -161,15 +164,16 @@ func (a *Application) WatchEndpoints() {
 			healthStatus = envoyApiV2Core.HealthStatus_UNKNOWN
 		}
 		endpoints := event.Object.(*k8sApiV1Core.Endpoints)
+		clusterName := getClusterNameByEndpoints(endpoints)
 		envoyEndpoints := a.Endpoints2ClusterLoadAssignment(endpoints, healthStatus)
-		resp, err := a.cache.Fetch(context.Background(), envoyApiV2.DiscoveryRequest{TypeUrl:"type.googleapis.com/envoy.api.v2.ClusterLoadAssignment"})
-		if err != nil {
-			a.logger.WithError(err).Fatalln("get previous snapshots failed")
+		a.snapshot[clusterName] = *envoyEndpoints
+		var resources []cache.Resource
+		for _, value := range a.snapshot {
+			resources = append(resources, &value)
 		}
-		mergedResources := append(resp.Resources, envoyEndpoints)
 		snapShot := cache.NewSnapshot(
 			endpoints.ResourceVersion,
-			mergedResources,
+			resources,
 			[]cache.Resource{},
 			[]cache.Resource{},
 			[]cache.Resource{},
@@ -193,7 +197,7 @@ func (a *Application) Serve() {
 // Endpoints2ClusterLoadAssignment convert Endpoints to ClusterLoadAssignment
 func (a *Application) Endpoints2ClusterLoadAssignment(endpoints *k8sApiV1Core.Endpoints, healthStatus envoyApiV2Core.HealthStatus) *envoyApiV2.ClusterLoadAssignment {
 	// clusterName format is "svcName.Namespace"
-	clusterName := endpoints.ObjectMeta.Name + "." + endpoints.ObjectMeta.Namespace
+	clusterName := getClusterNameByEndpoints(endpoints)
 
 	lbEndpoints := make([]endpoint.LbEndpoint, 0)
 	for _, subset := range endpoints.Subsets {
@@ -237,4 +241,8 @@ func (a *Application) Endpoints2ClusterLoadAssignment(endpoints *k8sApiV1Core.En
 			LbEndpoints: lbEndpoints,
 		}},
 	}
+}
+
+func getClusterNameByEndpoints(endpoints *k8sApiV1Core.Endpoints) string {
+	return endpoints.ObjectMeta.Name + "." + endpoints.ObjectMeta.Namespace
 }
