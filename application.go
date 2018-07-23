@@ -185,6 +185,7 @@ func (a *Application) WatchEndpoints() {
 		}
 		a.logger.WithField("version", endpoints.ResourceVersion).Infoln("set new snapshot")
 	}
+	a.logger.Infoln("watcher exited!")
 }
 
 // Serve start and block the main process
