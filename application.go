@@ -166,6 +166,7 @@ func (a *Application) WatchEndpoints() {
 		clusterName := getClusterNameByEndpoints(endpoints)
 		previousStatus, exist := a.snapshot[clusterName]
 		if exist {
+			a.logger.Infoln(previousStatus)
 			if previousStatus.Endpoints[0].LbEndpoints[0].HealthStatus == healthStatus {
 				continue
 			}
