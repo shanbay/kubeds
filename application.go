@@ -146,52 +146,47 @@ func (a *Application) WatchEndpoints() {
 	// 初次监听会返回当前的状态
 	// Endpoints 属于一个资源, 每次更新会带上当前所有的 endpoint, 例如当某个部署副本由 1 调整到 3 则会收到两次 MODIFIED 事件
 	nameSpace := a.Config.GetString("namespace")
-	endWatcher, err := a.KubeClient.CoreV1().Endpoints(nameSpace).Watch(k8sApiMetaV1.ListOptions{Watch:true})
-	if err != nil {
-		a.logger.WithError(err).Fatalln("watch endpoints changes failed")
-	}
-	a.logger.Infoln("start watching Endpoints events")
-	for event := range endWatcher.ResultChan() {
-		a.logger.WithField("event", event.Type).Infoln("endpoints event received")
-		var healthStatus envoyApiV2Core.HealthStatus
-		switch event.Type {
-		case watch.Added, watch.Modified:
-			healthStatus = envoyApiV2Core.HealthStatus_HEALTHY
-		case watch.Deleted, watch.Error:
-			healthStatus = envoyApiV2Core.HealthStatus_UNHEALTHY
-		default:
-			healthStatus = envoyApiV2Core.HealthStatus_UNKNOWN
+	for {
+		endWatcher, err := a.KubeClient.CoreV1().Endpoints(nameSpace).Watch(k8sApiMetaV1.ListOptions{})
+		if err != nil {
+			a.logger.WithError(err).Fatalln("watch endpoints changes failed")
 		}
-		endpoints := event.Object.(*k8sApiV1Core.Endpoints)
-		clusterName := getClusterNameByEndpoints(endpoints)
-		previousStatus, exist := a.snapshot[clusterName]
-		if exist {
-			a.logger.Infoln(previousStatus)
-			if previousStatus.Endpoints[0].LbEndpoints[0].HealthStatus == healthStatus {
-				continue
+		a.logger.Infoln("start watching Endpoints events")
+		for event := range endWatcher.ResultChan() {
+			a.logger.WithField("event", event.Type).Infoln("endpoints event received")
+			var healthStatus envoyApiV2Core.HealthStatus
+			switch event.Type {
+			case watch.Added, watch.Modified:
+				healthStatus = envoyApiV2Core.HealthStatus_HEALTHY
+			case watch.Deleted, watch.Error:
+				healthStatus = envoyApiV2Core.HealthStatus_UNHEALTHY
+			default:
+				healthStatus = envoyApiV2Core.HealthStatus_UNKNOWN
 			}
+			endpoints := event.Object.(*k8sApiV1Core.Endpoints)
+			clusterName := getClusterNameByEndpoints(endpoints)
+			envoyEndpoints := a.Endpoints2ClusterLoadAssignment(endpoints, healthStatus)
+			a.snapshot[clusterName] = *envoyEndpoints
+			var resources []cache.Resource
+			for k := range a.snapshot {
+				tmp := a.snapshot[k]
+				resources = append(resources, &tmp)
+			}
+			snapShot := cache.NewSnapshot(
+				endpoints.ResourceVersion,
+				resources,
+				[]cache.Resource{},
+				[]cache.Resource{},
+				[]cache.Resource{},
+			)
+			// TODO: dispatch Node
+			if err := a.cache.SetSnapshot(nodeID, snapShot); err != nil {
+				a.logger.WithError(err).Errorln("SetSnapshot failed ")
+			}
+			a.logger.WithField("version", endpoints.ResourceVersion).Infoln("set new snapshot")
 		}
-		envoyEndpoints := a.Endpoints2ClusterLoadAssignment(endpoints, healthStatus)
-		a.snapshot[clusterName] = *envoyEndpoints
-		var resources []cache.Resource
-		for k := range a.snapshot {
-			tmp := a.snapshot[k]
-			resources = append(resources, &tmp)
-		}
-		snapShot := cache.NewSnapshot(
-			endpoints.ResourceVersion,
-			resources,
-			[]cache.Resource{},
-			[]cache.Resource{},
-			[]cache.Resource{},
-		)
-		// TODO: dispatch Node
-		if err := a.cache.SetSnapshot(nodeID, snapShot); err != nil {
-			a.logger.WithError(err).Errorln("SetSnapshot failed ")
-		}
-		a.logger.WithField("version", endpoints.ResourceVersion).Infoln("set new snapshot")
+		a.logger.Infoln("watcher exited!")
 	}
-	a.logger.Infoln("watcher exited!")
 }
 
 // Serve start and block the main process
