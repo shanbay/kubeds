@@ -165,19 +165,6 @@ func (a *Application) WatchEndpoints() {
 			}
 			endpoints := event.Object.(*k8sApiV1Core.Endpoints)
 			clusterName := getClusterNameByEndpoints(endpoints)
-			if event.Type == watch.Modified {
-				previousCluster, exist := a.snapshot[clusterName]
-				if exist {
-					if len(previousCluster.GetEndpoints()) == 0 || len(previousCluster.GetEndpoints()[0].GetLbEndpoints()) == 0 {
-						a.logger.Warnln("previous endpoints empty", previousCluster)
-					} else {
-						previousHealthStatus := previousCluster.GetEndpoints()[0].GetLbEndpoints()[0].HealthStatus
-						if previousHealthStatus == healthStatus {
-							continue
-						}
-					}
-				}
-			}
 			envoyEndpoints := a.Endpoints2ClusterLoadAssignment(endpoints, healthStatus)
 			a.snapshot[clusterName] = *envoyEndpoints
 			var resources []cache.Resource
