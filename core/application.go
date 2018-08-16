@@ -1,4 +1,4 @@
-package leizu
+package core
 
 import (
 	"context"

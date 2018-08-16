@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 
 	"github.com/gogo/protobuf/jsonpb"
-	"github.com/shanbay/kubeds"
+	"github.com/shanbay/kubeds/core"
 	"github.com/shanbay/kubeds/test/resource"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -22,7 +22,7 @@ var testCmd = &cobra.Command{
 	Short: "test kubeds",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		app := leizu.InitApplication(viper.GetViper())
+		app := core.InitApplication(viper.GetViper())
 		// write bootstrap file
 		ns := viper.GetString("namespace")
 

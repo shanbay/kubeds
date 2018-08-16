@@ -5,11 +5,11 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/shanbay/kubeds"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/shanbay/kubeds/core"
 )
 
 func exportJSON(v interface{}, f string, m os.FileMode) error {
@@ -25,7 +25,7 @@ var exportCmd = &cobra.Command{
 	Short: "export kubernetes resources",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		kubeClient, err := leizu.SimpleKubeClient(viper.GetViper())
+		kubeClient, err := core.SimpleKubeClient(viper.GetViper())
 		if err != nil {
 			logrus.WithError(err).Fatalln("get kube client failed")
 		}

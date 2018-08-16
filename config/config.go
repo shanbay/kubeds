@@ -1,4 +1,4 @@
-package leizu
+package config
 
 import (
 	"fmt"

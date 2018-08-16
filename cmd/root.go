@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/shanbay/kubeds"
+	"github.com/shanbay/kubeds/core"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"k8s.io/client-go/util/homedir"
+	"github.com/shanbay/kubeds/config"
 )
 
 var cfgFile string
@@ -18,7 +19,7 @@ var rootCmd = &cobra.Command{
 	Short: "A envoy api implementation for kubernetes",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		app := leizu.InitApplication(viper.GetViper())
+		app := core.InitApplication(viper.GetViper())
 		app.Serve()
 	},
 }
@@ -54,7 +55,7 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	leizu.LoadDefaultSettingsFor(viper.GetViper())
+	config.LoadDefaultSettingsFor(viper.GetViper())
 
 	// Find home directory.
 	home := homedir.HomeDir()
