@@ -87,6 +87,11 @@ func InitApplication(config *viper.Viper) *Application {
 			ForceColors:   true,
 			FullTimestamp: true,
 		}
+		if level, err := logrus.ParseLevel(config.GetString("logLevel")); err != nil {
+			app.logger.SetLevel(level)
+		} else {
+			app.logger.SetLevel(logrus.WarnLevel)
+		}
 		// init snapshotCache
 		app.cache = cache.NewSnapshotCache(config.GetBool("ads"), Hasher{}, app.logger)
 		snapShot := cache.NewSnapshot(

@@ -7,6 +7,7 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
+	"github.com/sirupsen/logrus"
 )
 
 // LoadDefaultSettingsFor load default config
@@ -23,4 +24,5 @@ func LoadDefaultSettingsFor(v *viper.Viper) {
 	v.SetDefault("namespace", "")
 	v.SetDefault("xdsPort", 6666)
 	v.SetDefault("ads", false)
+	v.SetDefault("logLevel", logrus.WarnLevel)
 }
