@@ -48,6 +48,9 @@ func init() {
 	rootCmd.PersistentFlags().Uint16P("xdsPort", "p", uint16(viper.GetInt("xdsPort")), "port for xds")
 	viper.BindPFlag("xdsPort", rootCmd.PersistentFlags().Lookup("xdsPort"))
 
+	rootCmd.PersistentFlags().StringP("logLevel", "l", viper.GetString("logLevel"), "log level")
+	viper.BindEnv("logLevel")
+
 	// currently we do not support ADS
 	//rootCmd.PersistentFlags().Bool("ads", viper.GetBool("ads"), "Use ADS instead of separate xDS services")
 	//viper.BindPFlag("ads", rootCmd.Flags().Lookup("ads"))
